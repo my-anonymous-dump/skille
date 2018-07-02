@@ -1,0 +1,226 @@
+<html>
+
+<div> Strona ma za zadanie przefiltrowac umiejętności w taki sposób, by pokazać co możesz robić z danymi umiejętnościami, jaką pracę wykonywać. </div>
+<div> Drugim celem jest problem odwrotny, gdy wiesz jaką pracę chciałbyś wykonywać - jakich umiejętności potrzebujesz się douczyć, np. X,Y, Z. </div>
+
+<div> Wybierz, <a href="#" onclick="d();">dopasowanie twoich umiejętności do możliwych zawodów</a> vs <a href="#" onclick="p();">porównanie brakujących umiejętności dla konkretnego zawodu</a>.</div>
+<div id="query"></div>
+<div id="results" style="display: none"></div>
+<script type="text/javascript">
+
+	// zawod => wymagane skills .... OSTATNI WPIS NIE KONCZY SIĘ PRZECINKIEM.
+	try {
+		job_list = JSON.parse(`{
+
+	 	"policjant":   ["sprawność fizyczna", "wiedza ogólna"],
+	 	"grafik":      ["znajomość programów graficznych", "zdolności artystyczne", "dtp"],
+	 	"smieciarz":   ["sprawność manualna", "tolerancja brzydkich zapachów", "siła fizyczna"],
+	 	"górnik":      ["sprawność manualna", "siła fizyczna"],
+	 	"lekarz":      ["znajomość anatomii", "porządana zdolność do współczucia ludziom", "zdany egzamin LEK", "porządana: specjalizacja medyczna"],
+	 	"copy-writer": ["kreatywność", "poprawna polszczyzna", "język obcy"]
+
+	 }`);
+	} catch (err) {
+		document.write("Niepoprawny JSON");
+	}
+
+	var job_list;
+	var job_near;
+	var skills = new Set();
+	var jobs = new Set();
+	var your_skills = new Set();
+	var your_jobs = new Set();
+	var you_can_do = new Set();
+	var near = new Set();
+	var diff = new Set();
+	var you_nearly_can_do = new Set();
+	var show_what = 0;
+	// var calc_single_job = false;
+
+	function add_skill(skill){
+		var but = document.getElementById(skill);
+		if (your_skills.has(skill)){
+			your_skills.delete(skill);
+			but.style = "background-color: ";
+		}
+		else {
+			your_skills.add(skill);
+			but.style = "background-color: Green";
+		}
+
+		recalc_what_can_u_do();
+		show_what_can_u_do();
+	}
+	function check_job_req(job) {
+		var but = document.getElementById(job);
+
+		if (your_jobs.has(job)){
+			your_jobs.delete(job);
+			but.style = "background-color: ";
+		}
+		else {
+			your_jobs.add(job);
+		}
+		//calc_single_job = calc_single_job ? job : false;
+		recalc_what_can_u_do();
+		show_what = 2;
+		show_what_can_u_do();
+	}
+
+	function p(){
+		document.getElementById("results").innerHTML = "";
+		var div0 = document.getElementById("query");
+		div0.innerHTML = "";
+
+		var div3 = document.createElement("div");
+		div3.innerHTML = "wybierz swoje umiejetności:";
+		div0.append(div3);
+
+		var div4 = document.createElement("div");
+		skills.forEach(function(skill){
+			div4.innerHTML += '<button id=\'' + skill + '\' onclick="add_skill(this.id)">' + skill + '</button> ';
+		});
+		div0.append(div4);
+
+		var div1 = document.createElement("div");
+		div1.innerHTML = "wybierz jako kto chcesz pracować:";
+		div0.append(div1);
+		var div2 = document.createElement("div");
+		jobs.forEach(function(job){
+			div2.innerHTML += '<button id=\'' + job + '\' onclick="check_job_req(this.id)">' + job + '</button> ';
+		});
+		div0.append(div2);
+		your_skills.clear();
+		// calc_single_job = true;
+		show_what = 0;
+	}
+	function d(){
+		document.getElementById("results").innerHTML = "";
+		var div0 = document.getElementById("query");
+		div0.innerHTML = "";
+		var div1 = document.createElement("div");
+		div1.innerHTML = "wybierz swoje umiejetności:";
+		div0.append(div1);
+
+		var div2 = document.createElement("div");
+		skills.forEach(function(skill){
+			div2.innerHTML += '<button id=\'' + skill + '\' onclick="add_skill(this.id)">' + skill + '</button> ';
+		});
+		div0.append(div2);
+		your_skills.clear();
+		// calc_single_job = false;
+		show_what = 1;
+	}
+	function check_single_job(job){
+		var skill_set = new Set(job_list[job]);
+		near = new Set([...your_skills].filter(skill => skill_set.has(skill)));
+		diff = new Set([...skill_set].filter(skill => !your_skills.has(skill)));
+		if (diff.size == 0){
+			you_can_do.add(job);
+		}
+		else if (near.size > 0.6*skill_set.size){
+			you_nearly_can_do.add(job);
+		}
+		// this funny line checks what skills are closest to being completed. If not set, gets first current, if set does comparison. If already set, updates rate in case it changed.
+		job_near = (!job_near || (near.size/skill_set.size) > job_near.rate) ? {"job": job, "rate": near.size/skill_set.size} : {"job": job_near.job, "rate": job == job_near.job ? near.size/skill_set.size : job_near.rate };
+		return diff;
+	}
+	function recalc_what_can_u_do(){
+
+		var div0 = document.getElementById("results");
+		div0.style.display = "none";
+		you_can_do = new Set();
+		you_nearly_can_do = new Set();
+
+		// if (calc_single_job){
+		// 	check_single_job(calc_single_job);
+		// }
+		// else{
+			for (var job in job_list){
+				check_single_job(job);
+			}
+		// }
+	}
+
+	function show_what_can_u_do(){
+		var div0 = document.getElementById("results");
+		div0.innerHTML = "";
+
+		function spawn_list(container, style){
+			var have_style = (style == "undefined") ? '>' : ' style="' + style + '">';
+			var div = document.createElement("div");
+			container.forEach(function(item){
+				div.innerHTML += '<button' + have_style + " " + item + '</button> ';
+			});
+			return div;
+		}
+		function make_div(txt, container, style){
+			div0.style.display = "block";
+			div0.innerHTML += txt;
+			div0.append(spawn_list(container, style));
+		}
+
+		if (show_what == 1){
+			if (you_can_do.size > 0){
+				make_div("Gratulacje! Możesz pracować jako:", you_can_do, "background-color: Green");
+			}
+			if (you_nearly_can_do.size > 0){
+				make_div("Prawilnie, niewiele brakuje umiejetności do:", you_nearly_can_do,  "background-color: LightGreen");
+				you_nearly_can_do.forEach(function(job){
+					make_div("Brakujące umiejętności (" + job + "):<br/>", check_single_job(job));
+				});
+			}
+			else if (your_skills.size == 0){
+				div0.style.display = "block";
+				div0.innerHTML = "Nic nie umiesz przegrywie? Nic straconego, \
+									zawsze możesz spróbować zostać moderatorem śmiesznego portalu z obrazkami :)";
+			}
+			else if (you_can_do.size == 0 && you_nearly_can_do.size == 0){
+				make_div("Ogarnij coś jeszcze - póki co najbliżej masz np do (" + job_near.job + "):", check_single_job(job_near.job), "background-color: IndianRed");
+			}
+		}
+		if (show_what == 2){
+			jobs.forEach(function(job){
+				document.getElementById(job).style = "background-color: "; // uncolor all
+			});
+
+			if (you_can_do.size > 0){
+				you_can_do.forEach(function(job){
+					document.getElementById(job).style = "background-color: LightGreen"; // can do both selected and not selected for checkig
+				});
+			}
+
+		// if (show_what == 3)
+
+			your_jobs.forEach(function(job){
+				var but = document.getElementById(job);
+				if (you_can_do.has(job)){
+					but.style = "background-color: Green"; // can do, only selected for checking
+				}
+				else {
+					but.style = "background-color: Red"; // cannot do, only selected for checking
+					make_div("'otóż_nie.jpg' :) brakujące umiejetności (" + job + ") to:", check_single_job(job), "background-color: IndianRed  ");
+				}
+			});
+
+			if (you_nearly_can_do.size > 0){
+				make_div("Niewielu umiejętności brakuje do:", you_nearly_can_do, "background-color: Gray  ");
+			}
+		}
+		if (show_what == 0){
+			div0.style.display = "none";
+		}
+	};
+
+
+	for (var job in job_list){
+		if (job != 0 && job != 1){
+			var skill_set = job_list[job];
+			for (var skill_idx in skill_set)
+				skills.add(skill_set[skill_idx]);
+			jobs.add(job);
+		}
+	}
+
+</script>
+</html>
