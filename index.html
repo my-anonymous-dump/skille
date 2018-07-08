@@ -1,5 +1,5 @@
 <html>
-
+<meta charset="utf-8">
 <div> Strona ma za zadanie przefiltrowac umiejętności w taki sposób, by pokazać co możesz robić z danymi umiejętnościami, jaką pracę wykonywać. </div>
 <div> Drugim celem jest problem odwrotny, gdy wiesz jaką pracę chciałbyś wykonywać - jakich umiejętności potrzebujesz się douczyć, np. X,Y, Z. </div>
 
@@ -7,44 +7,167 @@
 <div id="query"></div>
 <div id="results" style="display: none"></div>
 <script type="text/javascript">
+	var skill_list;
+	var job_list;
+	var groups_list;
+	var base_list;
 
-	// zawod => wymagane skills .... OSTATNI WPIS NIE KONCZY SIĘ PRZECINKIEM.
+	// TODO: sugestie kolejnego kroku, rozwoju = np lekarz => specjalizacja/zarzadzanie => ordynator ..., lub magazynier => niewymagane ale przydatne uprawnienia SEP 
+
+	// OSTATNI WPIS NIE KONCZY SIĘ PRZECINKIEM !
+
 	try {
+
+		groups_list = JSON.parse(`{
+			"alfabetyzm":               ["umiejętność pisania", "umiejętność czytania", "umiejętność mówienia", "umiejętność słuchania"]
+		}`);
+
+		base_list = JSON.parse(`{
+			"muzyk":                    ["wyczulenie zmysłów (słuch)", "wykształcenie kierunkowe"],
+			"lekarz":                   ["znajomość anatomii", "empatia", "zdany egzamin LEK"]
+		}`);
+
 		job_list = JSON.parse(`{
 
-	 	"policjant":   ["sprawność fizyczna", "wiedza ogólna"],
-	 	"grafik":      ["znajomość programów graficznych", "zdolności artystyczne", "dtp"],
-	 	"smieciarz":   ["sprawność manualna", "tolerancja brzydkich zapachów", "siła fizyczna"],
-	 	"górnik":      ["sprawność manualna", "siła fizyczna"],
-	 	"lekarz":      ["znajomość anatomii", "porządana zdolność do współczucia ludziom", "zdany egzamin LEK", "porządana: specjalizacja medyczna"],
-	 	"copy-writer": ["kreatywność", "poprawna polszczyzna", "język obcy"]
+			"policjant":                {"u": ["kondycja/sprawność fizyczna", "odporność na stres", "wiedza ogólna"],                     "grupa": ["alfabetyzm"]},
+			"grafik":                   {"u": ["znajomość programów graficznych", "zdolności artystyczne", "dtp"] },
+			"smieciarz":                {"u": ["sprawność manualna", "tolerancja brzydkich zapachów", "siła fizyczna"] },
+			"górnik":                   {"u": ["odporność na stres", "siła fizyczna"] },
+			"lekarz":                   {"u": ["specjalizacja medyczna"],                                                                                                      "baza": ["lekarz"]                  },
+			"ordynator":                {"u": ["specjalizacja medyczna", "zarządzanie"],                                                                                       "baza": ["lekarz"]                  },
+			"copy-writer":              {"u": ["pisanie tekstów ze słowem kluczowym", "bogaty zasób słownictwa", "kreatywność"] },
+			"spawacz":                  {"u": ["spawanie TIG/MIG/MAG", "precyzja", "cierpliwość"] },
+			"spawacz-nurek":            {"u": ["spawanie TIG/MIG/MAG", "precyzja", "nurkowanie"] },
+			"elektryk":                 {"u": ["uprawnienia SEP", "wiedza techniczna"] },
+			"serwisant":                {"u": ["sprawność manualna", "wiedza techniczna"] },
+			"fryzjer":                  {"u": ["sprawność manualna", "kreatywność", "umiejętności interpersonalne", "cierpliwość"] },
+			"śpiewak":                  {"u": ["wyczulenie zmysłów (głos)"],                                                               "grupa": ["muzyk"]                                                       },
+			"dyrygent":                 {"u": ["wyczucie muzycznej harmonii", "zarządzanie"],                                              "grupa": ["alfabetyzm"],             "baza": ["muzyk"]                   },
+			"sędzia":                   {"u": ["znajomość przepisów prawa"] },
+			"sportowiec":               {"u": ["sportowe predyspozycje fizyczne"] },
+			"mechanik":                 {"u": ["siła fizyczna", "sprawność manualna", "wiedza techniczna", "cierpliwość"] },
+			"technolog":                {"u": ["kreatywność", "wiedza techniczna"] },
+			"przedstawiciel handlowy":  {"u": ["prawo jazdy", "umiejętność prezentacji publicznych", "umiejętności sprzedażowe", "umiejętność budowania sieci kontaktów"] },
+			"farmaceuta":               {"u": ["cierpliwość", "dokładność", "umiejętności interpersonalne", "wykształcenie kierunkowe"] },
+			"taksówkarz":               {"u": ["znajomość miasta", "prawo jazdy", "kultura osobista"] },
+			"kurier":                   {"u": ["znajomość miasta", "siła fizyczna", "prawo jazdy"] },
+			"sprzątacz":                {"u": ["dokładność"] },
+			"konserwator":              {"u": ["dokładność", "sprawność manualna"] },
+			"kierowca":                 {"u": ["prawo jazdy C/D/E"] },
+			"pracownik produkcji":      {"u": ["odporność na znużenie"] },
+			"sprzedawca/kasjer":        {"u": ["odporność na znużenie"] },
+			"robotnik budowlany":       {"u": ["odporność na znużenie", "siła fizyczna"] },
+			"ochroniarz":               {"u": ["kondycja/sprawność fizyczna"] },
+			"magazynier":               {"u": ["kondycja/sprawność fizyczna", "uprawnienia na wózki", "uprawnienia na zwyżkę"] },
+			"rolnik":                   {"u": ["siła fizyczna", "posiadanie ziemi/gotówki na ziemię"]}
+		}`);
 
-	 }`);
+		// wg opracowania Kompetencje zawodowe M.Kurbat: 
+		// związane z uzdolnieniami, z umiejętnościami, z wiedzą, fizyczne/psychofizyczne/wyczulenia zmysłów
+		// osobiste, społeczne, menadzerskie, specjalistyczno-techniczne
+		skill_list = JSON.parse(`[
+			
+			"prawo jazdy B",
+			"specjalistyczny sprzęt",
+			"prawo jazdy C/D/E",
+			"obsługa komputera",
+			"znajomość matematyki",
+			"znajomość historii",
+			"znajomość geografii",
+			"znajomość przepisów prawa",
+			"znajomość przepisów podatkowych",
+			"znajomość fizyki",
+			"znajomość miasta",
+			"wiedza techniczna",
+			"książeczka sanepidu",
+			"uprawnienia SEP",
+			"uprawnienia na zwyżkę",
+			"uprawnienia na wózki widłowe",
+
+			"siła fizyczna",
+			"kondycja/sprawność fizyczna",
+			"sprawność manualna",
+
+			"wyczulenie zmysłów (słuch)",
+			"wyczulenie zmysłów (głos)",
+			"wyczulenie zmysłów (węch)",
+			"wyczulenie zmysłów (wzrok)",
+			"wyczulenie zmysłów (smak)",
+
+			"dobra pamięć",
+			"wielozadaniowość",
+			"myślenie kreatywne/kreatywność",
+			"myślenie analityczne",
+
+			"odporność na stres",
+			"odporność na znużenie",
+			"otwartość na krytykę",
+			"otwartość na zmiany i niepewność",
+			"kontrola emocji",
+			"pewność siebie",
+			"elastyczność/gotowość do nauki",
+			"solidność",
+			"humor",
+			"kultura osobista",
+			"umiejętność budowania sieci kontaktów",
+			"znajomość mediów społecznościowych",
+
+			"umiejętność swobodnej komunikacji",
+			"umiejętność przemówień publicznych",
+			"umiejętność prezentacji publicznych",
+			"umiejętność budżetowania/kosztorysowania",
+			"umiejętności sprzedażowe",
+
+			"umiejętność pracy w zespole",
+			"umiejętność pracy z dziećmi",
+			"umiejętność pracy z młodzieżą",
+			"umiejętność pracy bez nadzoru",
+			"umiejętność wyszukiwania informacji",
+			"umiejętność obsługi klienta",
+			"umiejętność pisania raportów",
+			"umiejętność rozwiązywania problemów",
+			"umiejętność prioretyzowania problemów",
+			"umiejętność przewidywania problemów",
+			"umiejętności dydaktyczne",
+
+			"decyzyjność",
+			"zatrudnianie/zwalnianie pracowników",
+			"budowanie zespołów",
+			"negocjowanie umów",
+			"prowadzenie spotkań",
+			"motywowanie/coaching/rozwój podwładnych",
+			"delegowanie zadań",
+			"nadzór nad, i kontrola budżetu",
+			"myślenie strategiczne",
+			"ocena podwładnych",
+			"planowanie",
+			"przywództwo",
+			"rozwiązywanie konfliktów",
+			"kontrola czyjejś pracy"
+
+			]`);
 	} catch (err) {
-		document.write("Niepoprawny JSON");
+		document.write("Niepoprawny JSON - możesz sprawdzić jego poprawność online - wyszukaj w internecie 'online json validator'");
 	}
 
-	var job_list;
-	var job_near;
-	var skills = new Set();
-	var jobs = new Set();
-	var your_skills = new Set();
-	var your_jobs = new Set();
-	var you_can_do = new Set();
 	var near = new Set();
 	var diff = new Set();
-	var you_nearly_can_do = new Set();
+	var all_jobs = new Set();
+	var all_skills = new Set();
+	var user_skills = new Set();
+	var user_jobs = new Set();
+	var user_able = new Set();
+	var you_nearly_can_do = {};
 	var show_what = 0;
-	// var calc_single_job = false;
 
 	function add_skill(skill){
 		var but = document.getElementById(skill);
-		if (your_skills.has(skill)){
-			your_skills.delete(skill);
+		if (user_skills.has(skill)){
+			user_skills.delete(skill);
 			but.style = "background-color: ";
 		}
 		else {
-			your_skills.add(skill);
+			user_skills.add(skill);
 			but.style = "background-color: Green";
 		}
 
@@ -54,14 +177,13 @@
 	function check_job_req(job) {
 		var but = document.getElementById(job);
 
-		if (your_jobs.has(job)){
-			your_jobs.delete(job);
+		if (user_jobs.has(job)){
+			user_jobs.delete(job);
 			but.style = "background-color: ";
 		}
 		else {
-			your_jobs.add(job);
+			user_jobs.add(job);
 		}
-		//calc_single_job = calc_single_job ? job : false;
 		recalc_what_can_u_do();
 		show_what = 2;
 		show_what_can_u_do();
@@ -77,7 +199,7 @@
 		div0.append(div3);
 
 		var div4 = document.createElement("div");
-		skills.forEach(function(skill){
+		Array.from(all_skills).sort().forEach(function(skill){
 			div4.innerHTML += '<button id=\'' + skill + '\' onclick="add_skill(this.id)">' + skill + '</button> ';
 		});
 		div0.append(div4);
@@ -86,11 +208,11 @@
 		div1.innerHTML = "wybierz jako kto chcesz pracować:";
 		div0.append(div1);
 		var div2 = document.createElement("div");
-		jobs.forEach(function(job){
+		[...all_jobs].sort().forEach(function(job){
 			div2.innerHTML += '<button id=\'' + job + '\' onclick="check_job_req(this.id)">' + job + '</button> ';
 		});
 		div0.append(div2);
-		your_skills.clear();
+		user_skills.clear();
 		// calc_single_job = true;
 		show_what = 0;
 	}
@@ -103,43 +225,34 @@
 		div0.append(div1);
 
 		var div2 = document.createElement("div");
-		skills.forEach(function(skill){
+		[...all_skills].sort().forEach(function(skill){
 			div2.innerHTML += '<button id=\'' + skill + '\' onclick="add_skill(this.id)">' + skill + '</button> ';
 		});
 		div0.append(div2);
-		your_skills.clear();
+		user_skills.clear();
 		// calc_single_job = false;
 		show_what = 1;
 	}
 	function check_single_job(job){
-		var skill_set = new Set(job_list[job]);
-		near = new Set([...your_skills].filter(skill => skill_set.has(skill)));
-		diff = new Set([...skill_set].filter(skill => !your_skills.has(skill)));
+		var skill_set = merge_job_skills(job);
+		near = new Set([...user_skills].filter(skill => skill_set.has(skill)));
+		diff = new Set([...skill_set].filter(skill => !user_skills.has(skill)));
 		if (diff.size == 0){
-			you_can_do.add(job);
+			user_able.add(job);
 		}
-		else if (near.size > 0.6*skill_set.size){
-			you_nearly_can_do.add(job);
-		}
-		// this funny line checks what skills are closest to being completed. If not set, gets first current, if set does comparison. If already set, updates rate in case it changed.
-		job_near = (!job_near || (near.size/skill_set.size) > job_near.rate) ? {"job": job, "rate": near.size/skill_set.size} : {"job": job_near.job, "rate": job == job_near.job ? near.size/skill_set.size : job_near.rate };
+		you_nearly_can_do[job] = near.size/skill_set.size;
 		return diff;
 	}
 	function recalc_what_can_u_do(){
 
 		var div0 = document.getElementById("results");
 		div0.style.display = "none";
-		you_can_do = new Set();
-		you_nearly_can_do = new Set();
+		user_able = new Set();
+		you_nearly_can_do = {};
 
-		// if (calc_single_job){
-		// 	check_single_job(calc_single_job);
-		// }
-		// else{
-			for (var job in job_list){
-				check_single_job(job);
-			}
-		// }
+		for (var job in job_list){
+			check_single_job(job);
+		}
 	}
 
 	function show_what_can_u_do(){
@@ -149,9 +262,10 @@
 		function spawn_list(container, style){
 			var have_style = (style == "undefined") ? '>' : ' style="' + style + '">';
 			var div = document.createElement("div");
-			container.forEach(function(item){
-				div.innerHTML += '<button' + have_style + " " + item + '</button> ';
-			});
+			if (container)
+				container.forEach(function(item){
+					div.innerHTML += '<button' + have_style + " " + item + '</button> ';
+				});
 			return div;
 		}
 		function make_div(txt, container, style){
@@ -161,66 +275,96 @@
 		}
 
 		if (show_what == 1){
-			if (you_can_do.size > 0){
-				make_div("Gratulacje! Możesz pracować jako:", you_can_do, "background-color: Green");
+			if (user_able.size > 0){
+				make_div("Gratulacje! Możesz pracować jako:", user_able, "background-color: Green");
 			}
-			if (you_nearly_can_do.size > 0){
-				make_div("Prawilnie, niewiele brakuje umiejetności do:", you_nearly_can_do,  "background-color: LightGreen");
-				you_nearly_can_do.forEach(function(job){
-					make_div("Brakujące umiejętności (" + job + "):<br/>", check_single_job(job));
+			selected = Object.keys(you_nearly_can_do).filter((job)=> you_nearly_can_do[job] > 0.7 && you_nearly_can_do[job] < 1.0);
+
+			if (selected.length > 0){
+				make_div("Prawilnie! Niewiele brakuje umiejetności do:", selected, "background-color: LightGreen");
+				selected.forEach(function(job){
+					make_div("- brakujące umiejętności (" + job + "):<br/>", check_single_job(job));
 				});
 			}
-			else if (your_skills.size == 0){
+			else if (user_skills.size == 0){
 				div0.style.display = "block";
-				div0.innerHTML = "Nic nie umiesz przegrywie? Nic straconego, \
+				div0.innerHTML = "Nic nie umiesz, przegrywie? :) Nic straconego, \
 									zawsze możesz spróbować zostać moderatorem śmiesznego portalu z obrazkami :)";
 			}
-			else if (you_can_do.size == 0 && you_nearly_can_do.size == 0){
-				make_div("Ogarnij coś jeszcze - póki co najbliżej masz np do (" + job_near.job + "):", check_single_job(job_near.job), "background-color: IndianRed");
+			else if (user_able.size == 0){
+				neraby = Object.keys(you_nearly_can_do).filter((job)=>you_nearly_can_do[job]>0.1).sort( function(a,b){return you_nearly_can_do[a]>you_nearly_can_do[b];} ).reverse().slice(0, 3);
+				if (neraby.length > 0){
+					make_div("Ogarnij coś jeszcze - póki co najbliżej masz do (" + neraby + "):");
+					neraby.forEach(function(job){
+						make_div("- brakujące umiejętności (" + job + "):<br/>", check_single_job(job), "background-color: IndianRed");
+					});
+				}
 			}
 		}
 		if (show_what == 2){
-			jobs.forEach(function(job){
+			all_jobs.forEach(function(job){
 				document.getElementById(job).style = "background-color: "; // uncolor all
 			});
 
-			if (you_can_do.size > 0){
-				you_can_do.forEach(function(job){
+			if (user_able.size > 0){
+				user_able.forEach(function(job){
 					document.getElementById(job).style = "background-color: LightGreen"; // can do both selected and not selected for checkig
 				});
 			}
 
-		// if (show_what == 3)
-
-			your_jobs.forEach(function(job){
+			user_jobs.forEach(function(job){
 				var but = document.getElementById(job);
-				if (you_can_do.has(job)){
+				if (user_able.has(job)){
 					but.style = "background-color: Green"; // can do, only selected for checking
 				}
 				else {
 					but.style = "background-color: Red"; // cannot do, only selected for checking
-					make_div("'otóż_nie.jpg' :) brakujące umiejetności (" + job + ") to:", check_single_job(job), "background-color: IndianRed  ");
+					make_div("'otóż_nie.jpg' :) brakujące umiejetności (" + job + ") to:", check_single_job(job), "background-color: IndianRed");
 				}
 			});
 
-			if (you_nearly_can_do.size > 0){
-				make_div("Niewielu umiejętności brakuje do:", you_nearly_can_do, "background-color: Gray  ");
+			selected = Object.keys(you_nearly_can_do).filter((job)=> you_nearly_can_do[job] > 0.4 && you_nearly_can_do[job] < 1.0);
+			if (selected.length > 0){
+				make_div("Niewielu umiejętności brakuje do:", selected, "background-color: Gray");
+				selected.forEach(function(job){
+					if (!user_jobs.has(job))
+					document.getElementById(job).style = "background-color: Gray";
+				});
 			}
 		}
 		if (show_what == 0){
 			div0.style.display = "none";
 		}
 	};
-
-
-	for (var job in job_list){
-		if (job != 0 && job != 1){
-			var skill_set = job_list[job];
+	function merge_job_skills(job){
+		var job_skills = new Set();
+		skill_set = job_list[job]["baza"];
+		if (skill_set)
 			for (var skill_idx in skill_set)
-				skills.add(skill_set[skill_idx]);
-			jobs.add(job);
+				for (var skill_base_idx in base_list[skill_set[skill_idx]])
+					job_skills.add(base_list[skill_set[skill_idx]][skill_base_idx]);
+		skill_set = job_list[job]["grupa"];
+		if (skill_set)
+			for (var skill_idx in skill_set)
+				for (var skill_group_idx in groups_list[skill_set[skill_idx]])
+					job_skills.add(groups_list[skill_set[skill_idx]][skill_group_idx]);
+		skill_set = job_list[job]["u"];
+		if (skill_set)
+			for (var skill_idx in skill_set)
+				job_skills.add(skill_set[skill_idx]);
+		return job_skills;
+	}
+	function init(){
+		for (var job in job_list){
+			all_skills = new Set(function*(){yield* merge_job_skills(job); yield* all_skills;}());
+		//	console.log("ALL" + all_skills);
+			all_jobs.add(job);
+		}
+		for (var skill_idx in skill_list){
+			all_skills.add(skill_list[skill_idx]);
 		}
 	}
+	init();
 
 </script>
 </html>
